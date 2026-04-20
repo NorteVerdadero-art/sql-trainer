@@ -263,7 +263,7 @@
 
 <script type="module">
 import { TrainerStore, SEED_EXERCISES } from './js/store.js';
-import { LAYERS, generateExercises, checkAnswer, askBusinessQuestion } from './js/generator.js';
+import { LAYERS, generateExercises, checkAnswer, askBusinessQuestion, simulateQueryResult } from './js/generator.js';
 import { WHMCS_SCHEMA } from './data/schema.js';
 import {
   renderExerciseCard, showFeedback,
@@ -274,6 +274,7 @@ import {
 
 // ─── Store ───
 const store = new TrainerStore();
+const simCache = new Map(); // cache en memoria: ex.id → { columns, rows, exec_time }
 let currentLayer = 1;
 let examQuestions = [];
 let examAnswers   = {};
@@ -368,7 +369,9 @@ function handleSubmit(ex, prefix = '') {
   if (result.ok) {
     store.markCompleted(ex.id);
     store.logAttempt(ex.id, query, true);
-    showSuccessFeedback(fb, ex);
+    const hasApiKey = !!store.getApiKey();
+    showSuccessFeedback(fb, ex, hasApiKey && prefix !== 'exam_');
+    if (hasApiKey && prefix !== 'exam_') simulateAndShowTable(ex, query);
     updateProgress();
     renderLayerGrid();
     // Mark card
@@ -665,6 +668,58 @@ document.getElementById('btn-clear-gen').addEventListener('click', () => {
   renderExerciseList();
   showToast('Ejercicios generados eliminados', 'info');
 });
+
+// ─── Simulación de resultado MySQL ───
+async function simulateAndShowTable(ex, query) {
+  const container = document.getElementById('sim_' + ex.id);
+  if (!container) return;
+
+  if (simCache.has(ex.id)) {
+    renderSimTable(container, simCache.get(ex.id));
+    return;
+  }
+
+  container.innerHTML = '<div class="sim-loading"><span class="spinner"></span> Simulando resultado MySQL…</div>';
+
+  try {
+    const result = await simulateQueryResult({
+      exercise: ex,
+      query,
+      apiKey: store.getApiKey(),
+      customSchema: store.getCustomSchema()
+    });
+    simCache.set(ex.id, result);
+    renderSimTable(container, result);
+  } catch {
+    container.innerHTML = '';
+  }
+}
+
+function renderSimTable(container, { columns, rows, exec_time }) {
+  if (!columns?.length || !rows?.length) { container.innerHTML = ''; return; }
+
+  const isNumeric = v => v !== null && v !== 'NULL' && !isNaN(String(v).replace(/[,$%]/g, ''));
+
+  const thead = columns.map(c => `<th>${c}</th>`).join('');
+  const tbody = rows.map(row =>
+    '<tr>' + columns.map((_, i) => {
+      const v = row[i];
+      if (v === null || v === 'NULL') return '<td class="null-val">NULL</td>';
+      if (isNumeric(v))              return `<td class="num-val">${v}</td>`;
+      return `<td>${v}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+
+  container.innerHTML = `
+    <div class="sim-table-label">▶ Resultado simulado</div>
+    <div class="sim-table-scroll">
+      <table class="sim-table">
+        <thead><tr>${thead}</tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+    <div class="sim-row-count">${rows.length} row${rows.length !== 1 ? 's' : ''} in set (${exec_time || '0.02'} sec)</div>`;
+}
 
 // ─── Consultar SQL ───
 document.querySelectorAll('.query-chip').forEach(chip => {

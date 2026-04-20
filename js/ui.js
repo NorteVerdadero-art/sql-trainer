@@ -199,12 +199,12 @@ export function showFeedback(fbEl, type, title, body, extra = '') {
     ${extra}`;
 }
 
-export function showSuccessFeedback(fbEl, ex) {
+export function showSuccessFeedback(fbEl, ex, withSimTable = false) {
   showFeedback(fbEl, 'ok', '✓ Correcto', `
     Identificaste correctamente el concepto <code>${ex.concept}</code>.
     <br><br>
     <strong>Tip pro:</strong> ${ex.pro_tip}
-  `);
+  `, withSimTable ? `<div class="sim-table-wrap" id="sim_${ex.id}"></div>` : '');
 }
 
 export function showErrorFeedback(fbEl, message) {

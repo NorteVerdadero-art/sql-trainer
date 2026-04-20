@@ -224,6 +224,72 @@ Responde ÚNICAMENTE con este JSON (sin backticks, sin texto extra):
 }
 
 // ────────────────────────────────────────────────
+// simulateQueryResult: genera datos simulados realistas
+// ────────────────────────────────────────────────
+export async function simulateQueryResult({ exercise, query, apiKey, customSchema = null }) {
+  const schemaText = formatSchemaForPrompt(customSchema);
+  const cleanQuestion = exercise.question.replace(/<[^>]*>/g, '');
+
+  const prompt = `Simula el resultado de ejecutar este query SQL contra una base de datos WHMCS 8.2 de una empresa SaaS de hosting mexicana.
+
+## CATÁLOGO DE PRODUCTOS (IDs reales)
+${PRODUCTS_CONTEXT}
+
+## SCHEMA
+${schemaText}
+
+## CONTEXTO DEL EJERCICIO
+${cleanQuestion}
+
+## QUERY A SIMULAR
+${query}
+
+Genera 5-8 filas de resultados REALISTAS:
+- Nombres mexicanos (Carlos, Ana, José, María, Roberto, etc.)
+- Emails con dominios reales (gmail, hotmail, empresa.com.mx)
+- Fechas en 2023-2024
+- Precios coherentes con el catálogo (MXN)
+- Valores de status según el schema
+
+Responde ÚNICAMENTE con este JSON (sin backticks, sin texto extra):
+{
+  "columns": ["alias_col1", "alias_col2"],
+  "rows": [["val1","val2"], ["val3","val4"]],
+  "exec_time": "0.03"
+}`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1200,
+      system: 'Genera resultados SQL simulados realistas en JSON. Sin texto adicional, sin backticks.',
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) throw new Error(`API ${response.status}`);
+
+  const data    = await response.json();
+  const raw     = data.content?.[0]?.text || '';
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Parse error');
+  }
+}
+
+// ────────────────────────────────────────────────
 // checkAnswer: evalúa respuesta del alumno
 // ────────────────────────────────────────────────
 export function checkAnswer(exercise, userQuery, customSchema = null) {
