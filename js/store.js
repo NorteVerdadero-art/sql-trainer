@@ -240,4 +240,20 @@ export class TrainerStore {
     this.exercises = this.exercises.filter(e => seedIds.has(e.id));
     this.save();
   }
+
+  // Custom schema (stored separately, not in main save blob)
+  getCustomSchema() {
+    try {
+      const raw = localStorage.getItem('sql_trainer_custom_schema');
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  setCustomSchema(schema) {
+    localStorage.setItem('sql_trainer_custom_schema', JSON.stringify(schema));
+  }
+
+  clearCustomSchema() {
+    localStorage.removeItem('sql_trainer_custom_schema');
+  }
 }

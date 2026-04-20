@@ -3,26 +3,26 @@
    Dark terminal aesthetic + clean data tables
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
 /* ─── Variables ─── */
 :root {
-  --bg:        #0c0e12;
-  --surface:   #131620;
-  --surface2:  #1a1f2e;
-  --surface3:  #212638;
-  --border:    #232840;
-  --border2:   #2d3450;
-  --accent:    #5b8dee;
-  --green:     #3ecf8e;
-  --yellow:    #f7c94b;
-  --red:       #e85d5d;
-  --coral:     #f07060;
-  --text:      #e4e6f0;
-  --muted:     #68718f;
-  --dim:       #353c58;
+  --bg:        #f4f6fb;
+  --surface:   #ffffff;
+  --surface2:  #eef1f8;
+  --surface3:  #e3e8f2;
+  --border:    #d5daea;
+  --border2:   #bac4d8;
+  --accent:    #3b6fd4;
+  --green:     #1a9e6a;
+  --yellow:    #8b7000;
+  --red:       #c43030;
+  --coral:     #b84030;
+  --text:      #1a1f2e;
+  --muted:     #5a6280;
+  --dim:       #96a0ba;
   --mono:      'JetBrains Mono', 'Courier New', monospace;
-  --sans:      'Syne', system-ui, sans-serif;
+  --sans:      'Inter', system-ui, sans-serif;
   --radius:    10px;
   --radius-lg: 14px;
 }
@@ -47,7 +47,7 @@ body::before {
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 44px 44px;
-  opacity: 0.25;
+  opacity: 0.5;
   pointer-events: none;
   z-index: 0;
 }
@@ -191,14 +191,14 @@ body::before {
 .layer-btn:hover { border-color: var(--border2); transform: translateY(-1px); }
 .layer-btn.sel { background: var(--surface2); }
 
-.layer-btn[data-l="1"] { border-left-color: #3ecf8e; }
-.layer-btn[data-l="1"].sel { border-left-color: #3ecf8e; }
-.layer-btn[data-l="2"] { border-left-color: #5b8dee; }
-.layer-btn[data-l="2"].sel { border-left-color: #5b8dee; }
-.layer-btn[data-l="3"] { border-left-color: #f7c94b; }
-.layer-btn[data-l="3"].sel { border-left-color: #f7c94b; }
-.layer-btn[data-l="4"] { border-left-color: #e85d5d; }
-.layer-btn[data-l="4"].sel { border-left-color: #e85d5d; }
+.layer-btn[data-l="1"] { border-left-color: #1a9e6a; }
+.layer-btn[data-l="1"].sel { border-left-color: #1a9e6a; }
+.layer-btn[data-l="2"] { border-left-color: #3b6fd4; }
+.layer-btn[data-l="2"].sel { border-left-color: #3b6fd4; }
+.layer-btn[data-l="3"] { border-left-color: #9a7a00; }
+.layer-btn[data-l="3"].sel { border-left-color: #9a7a00; }
+.layer-btn[data-l="4"] { border-left-color: #c43030; }
+.layer-btn[data-l="4"].sel { border-left-color: #c43030; }
 
 .layer-num   { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .layer-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
@@ -663,6 +663,49 @@ option { background: var(--surface); }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+
+/* ─── Collapsible explainer ─── */
+details.explainer { cursor: default; }
+.explainer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.explainer-summary::-webkit-details-marker { display: none; }
+.explainer-chevron {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+details[open] .explainer-chevron { transform: rotate(90deg); }
+.explainer-body { margin-top: 10px; }
+.explainer-example-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 10px 0 5px;
+}
+.example-pre {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 1.7;
+  margin: 0;
+}
 
 /* ─── Utilities ─── */
 .empty-state { font-size: 13px; color: var(--muted); padding: 20px 0; }

@@ -8,7 +8,7 @@ import { WHMCS_SCHEMA, BUSINESS_CONTEXT } from '../data/schema.js';
 export const LAYERS = {
   1: {
     name: "Recuperar datos",
-    color: "#3ecf8e",
+    color: "#1a9e6a",
     badge: "badge-l1",
     concepts: ["SELECT *", "SELECT columnas", "FROM", "WHERE =", "ORDER BY", "LIMIT", "DISTINCT", "Alias con AS"],
     difficulty: "Fundamentos — toda query empieza aquí",
@@ -16,7 +16,7 @@ export const LAYERS = {
   },
   2: {
     name: "Filtrar & transformar",
-    color: "#5b8dee",
+    color: "#3b6fd4",
     badge: "badge-l2",
     concepts: ["AND / OR / NOT", "IN / NOT IN", "BETWEEN", "LIKE / NOT LIKE", "IS NULL / IS NOT NULL", "CASE WHEN", "COALESCE", "CAST", "Funciones de fecha (YEAR, MONTH, DATEDIFF)"],
     difficulty: "Intermedio — dar forma al dataset",
@@ -24,7 +24,7 @@ export const LAYERS = {
   },
   3: {
     name: "Agregar & agrupar",
-    color: "#f7c94b",
+    color: "#9a7a00",
     badge: "badge-l3",
     concepts: ["COUNT(*) / COUNT(col)", "SUM / AVG / MIN / MAX", "GROUP BY simple", "GROUP BY múltiple", "HAVING", "Subconsultas en WHERE", "Subconsultas en SELECT"],
     difficulty: "Analítico — resumir el negocio",
@@ -32,7 +32,7 @@ export const LAYERS = {
   },
   4: {
     name: "Relacionar tablas",
-    color: "#e85d5d",
+    color: "#c43030",
     badge: "badge-l4",
     concepts: ["INNER JOIN", "LEFT JOIN", "Multi-table JOIN", "CTEs (WITH)", "Window Functions: RANK / ROW_NUMBER", "Window Functions: LAG / LEAD", "PARTITION BY"],
     difficulty: "Avanzado — cruzar fuentes de datos",
@@ -43,9 +43,9 @@ export const LAYERS = {
 // ────────────────────────────────────────────────
 // buildPrompt: construye el prompt para Claude
 // ────────────────────────────────────────────────
-function buildPrompt(layer, concept, count = 1, existingIds = []) {
+function buildPrompt(layer, concept, count = 1, existingIds = [], customSchema = null) {
   const layerInfo = LAYERS[layer];
-  const schemaText = formatSchemaForPrompt();
+  const schemaText = formatSchemaForPrompt(customSchema);
   const existingNote = existingIds.length > 0
     ? `\nYa existen ejercicios con IDs: ${existingIds.join(', ')}. Genera IDs distintos comenzando desde l${layer}_${String(existingIds.length + 1).padStart(2,'0')}.`
     : '';
@@ -98,8 +98,9 @@ Estructura de cada ejercicio:
 // ────────────────────────────────────────────────
 // formatSchemaForPrompt: schema compacto para el prompt
 // ────────────────────────────────────────────────
-function formatSchemaForPrompt() {
-  return WHMCS_SCHEMA.tables.map(t => {
+function formatSchemaForPrompt(customSchema = null) {
+  const schema = customSchema || WHMCS_SCHEMA;
+  return schema.tables.map(t => {
     const cols = t.columns.map(c => {
       const flags = [c.pk ? 'PK' : null, c.fk ? `FK→${c.fk}` : null].filter(Boolean).join(' ');
       return `  ${c.name} ${c.type}${flags ? ' [' + flags + ']' : ''}${c.note ? ' -- ' + c.note : ''}`;
@@ -111,8 +112,8 @@ function formatSchemaForPrompt() {
 // ────────────────────────────────────────────────
 // generateExercises: llama Claude API y parsea respuesta
 // ────────────────────────────────────────────────
-export async function generateExercises({ layer, concept, count = 1, existingIds = [], apiKey }) {
-  const prompt = buildPrompt(layer, concept, count, existingIds);
+export async function generateExercises({ layer, concept, count = 1, existingIds = [], apiKey, customSchema = null }) {
+  const prompt = buildPrompt(layer, concept, count, existingIds, customSchema);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -160,7 +161,7 @@ export async function generateExercises({ layer, concept, count = 1, existingIds
 // ────────────────────────────────────────────────
 // checkAnswer: evalúa respuesta del alumno
 // ────────────────────────────────────────────────
-export function checkAnswer(exercise, userQuery) {
+export function checkAnswer(exercise, userQuery, customSchema = null) {
   const q = userQuery.toLowerCase().replace(/\s+/g, ' ').trim();
   const rules = exercise.check_rules;
 
@@ -179,7 +180,8 @@ export function checkAnswer(exercise, userQuery) {
       msg = 'Un query SQL siempre empieza con <code>SELECT</code>.';
     }
 
-    const tableMentioned = WHMCS_SCHEMA.tables.some(t => q.includes(t.name));
+    const activeSchema = customSchema || WHMCS_SCHEMA;
+    const tableMentioned = activeSchema.tables.some(t => q.includes(t.name));
     if (!tableMentioned && q.includes('from')) {
       msg = exercise.error_messages?.no_table || 'No encontré ninguna tabla WHMCS en tu query. Revisa el schema.';
     }

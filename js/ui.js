@@ -5,6 +5,126 @@
 import { LAYERS } from './generator.js';
 import { WHMCS_SCHEMA } from '../data/schema.js';
 
+const CONCEPT_EXAMPLES = {
+  'SELECT *':
+`SELECT *
+FROM tblinvoices;`,
+  'SELECT columnas':
+`SELECT id, userid, total, status
+FROM tblinvoices;`,
+  'WHERE =':
+`SELECT *
+FROM tblinvoices
+WHERE status = 'Paid';`,
+  'ORDER BY DESC':
+`SELECT id, total
+FROM tblinvoices
+ORDER BY total DESC;`,
+  'LIMIT':
+`SELECT *
+FROM tblclients
+ORDER BY datecreated DESC
+LIMIT 10;`,
+  'DISTINCT':
+`SELECT DISTINCT paymentmethod
+FROM tblinvoices;`,
+  'Alias con AS':
+`SELECT total        AS ingreso_total,
+       userid       AS cliente_id
+FROM tblinvoices;`,
+  'AND / OR / NOT':
+`SELECT *
+FROM tblinvoices
+WHERE status = 'Paid'
+  AND total > 500;`,
+  'IN / NOT IN':
+`SELECT *
+FROM tblinvoices
+WHERE status IN ('Paid', 'Overdue');`,
+  'BETWEEN':
+`SELECT *
+FROM tblinvoices
+WHERE date BETWEEN '2024-01-01' AND '2024-12-31';`,
+  'LIKE / NOT LIKE':
+`SELECT *
+FROM tblclients
+WHERE email LIKE '%@gmail.com';`,
+  'IS NULL / IS NOT NULL':
+`SELECT *
+FROM tblinvoices
+WHERE datepaid IS NULL;`,
+  'CASE WHEN':
+`SELECT id,
+  CASE
+    WHEN total > 1000 THEN 'Alto'
+    WHEN total > 500  THEN 'Medio'
+    ELSE 'Bajo'
+  END AS segmento
+FROM tblinvoices;`,
+  'COALESCE':
+`SELECT id,
+  COALESCE(notes, 'Sin notas') AS notas
+FROM tblinvoices;`,
+  'CAST':
+`SELECT CAST(total AS UNSIGNED) AS total_entero
+FROM tblinvoices;`,
+  'COUNT(*) / COUNT(col)':
+`SELECT COUNT(*)          AS total_facturas,
+       COUNT(datepaid)   AS facturas_cobradas
+FROM tblinvoices;`,
+  'SUM / AVG / MIN / MAX':
+`SELECT SUM(total) AS ingresos,
+       AVG(total) AS promedio,
+       MAX(total) AS mayor
+FROM tblinvoices;`,
+  'GROUP BY simple':
+`SELECT status, COUNT(*) AS cantidad
+FROM tblinvoices
+GROUP BY status;`,
+  'GROUP BY múltiple':
+`SELECT userid, status, COUNT(*) AS cnt
+FROM tblinvoices
+GROUP BY userid, status;`,
+  'HAVING':
+`SELECT userid, SUM(total) AS total
+FROM tblinvoices
+GROUP BY userid
+HAVING SUM(total) > 1000;`,
+  'Subconsultas en WHERE':
+`SELECT *
+FROM tblclients
+WHERE id IN (
+  SELECT userid FROM tblinvoices WHERE status = 'Paid'
+);`,
+  'INNER JOIN':
+`SELECT c.firstname, i.total
+FROM tblclients c
+INNER JOIN tblinvoices i ON c.id = i.userid;`,
+  'LEFT JOIN':
+`SELECT c.firstname, i.total
+FROM tblclients c
+LEFT JOIN tblinvoices i ON c.id = i.userid;`,
+  'CTEs (WITH)':
+`WITH pagadas AS (
+  SELECT userid, SUM(total) AS total
+  FROM tblinvoices
+  WHERE status = 'Paid'
+  GROUP BY userid
+)
+SELECT c.firstname, p.total
+FROM tblclients c
+JOIN pagadas p ON c.id = p.userid;`,
+  'Window Functions: RANK / ROW_NUMBER':
+`SELECT userid, SUM(total) AS gasto,
+  RANK() OVER (ORDER BY SUM(total) DESC) AS ranking
+FROM tblinvoices
+GROUP BY userid;`,
+  'Window Functions: LAG / LEAD':
+`SELECT date, total,
+  LAG(total) OVER (ORDER BY date) AS mes_anterior
+FROM tblinvoices;`,
+};
+
 // ────────────────────────────────────────────────
 // renderExerciseCard
 // ────────────────────────────────────────────────
@@ -26,10 +146,18 @@ export function renderExerciseCard(ex, store, { examMode = false, onSubmit, onHi
     </div>
     <div class="ex-body">
       <p class="ex-question">${ex.question}</p>
-      <div class="explainer">
-        <div class="explainer-label">📖 Concepto</div>
-        <div class="explainer-text">${ex.explanation}</div>
-      </div>
+      <details class="explainer">
+        <summary class="explainer-summary">
+          <div class="explainer-label">📖 ${ex.concept}</div>
+          <span class="explainer-chevron">▸</span>
+        </summary>
+        <div class="explainer-body">
+          <div class="explainer-text">${ex.explanation}</div>
+          ${CONCEPT_EXAMPLES[ex.concept] ? `
+          <div class="explainer-example-label">Ejemplo práctico</div>
+          <pre class="example-pre">${CONCEPT_EXAMPLES[ex.concept]}</pre>` : ''}
+        </div>
+      </details>
       <div class="editor-wrap">
         <div class="editor-bar">
           <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
