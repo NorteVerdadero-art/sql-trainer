@@ -2,7 +2,7 @@
 // generator.js — Motor de generación de ejercicios con Claude API
 // ============================================================
 
-import { WHMCS_SCHEMA, BUSINESS_CONTEXT } from '../data/schema.js';
+import { WHMCS_SCHEMA, BUSINESS_CONTEXT, PRODUCTS_CONTEXT } from '../data/schema.js';
 
 // Capas con su descripción de dificultad y conceptos objetivo
 export const LAYERS = {
@@ -156,6 +156,71 @@ export async function generateExercises({ layer, concept, count = 1, existingIds
   }
 
   return Array.isArray(parsed) ? parsed : [parsed];
+}
+
+// ────────────────────────────────────────────────
+// askBusinessQuestion: Pregunta libre → SQL sugerido
+// ────────────────────────────────────────────────
+export async function askBusinessQuestion({ question, apiKey, customSchema = null }) {
+  const schemaText = formatSchemaForPrompt(customSchema);
+
+  const userPrompt = `${BUSINESS_CONTEXT}
+
+## CATÁLOGO DE PRODUCTOS (IDs reales en tblproducts / tblhosting.packageid)
+${PRODUCTS_CONTEXT}
+
+## SCHEMA DE BASE DE DATOS
+${schemaText}
+
+## PREGUNTA DE NEGOCIO
+${question}
+
+## INSTRUCCIONES
+Genera el query SQL más preciso posible para MySQL 5.7+ que responda exactamente la pregunta.
+Usa los IDs y nombres de producto del catálogo cuando sea relevante.
+Usa alias descriptivos en las columnas del SELECT.
+Formatea el SQL con saltos de línea para legibilidad.
+
+Responde ÚNICAMENTE con este JSON (sin backticks, sin texto extra):
+{
+  "query": "SELECT ... -- query SQL completo",
+  "explanation": "Qué hace el query y por qué está estructurado así (2-3 oraciones)",
+  "tables": ["tabla1", "tabla2"],
+  "insight": "Un insight de negocio que revela este dato — qué acción tomar con este resultado (1 oración)"
+}`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: 'Eres un experto en SQL y BI para SaaS de hosting. Responde ÚNICAMENTE con JSON válido. Sin texto adicional, sin markdown, sin backticks.',
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  const raw  = data.content?.[0]?.text || '';
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('No se pudo parsear la respuesta de Claude.');
+  }
 }
 
 // ────────────────────────────────────────────────

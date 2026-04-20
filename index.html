@@ -32,6 +32,7 @@
   <!-- NAV -->
   <div class="nav">
     <button class="nav-btn active" data-sec="ejercicios">Ejercicios</button>
+    <button class="nav-btn" data-sec="consultar">Consultar</button>
     <button class="nav-btn" data-sec="generar">Generar</button>
     <button class="nav-btn" data-sec="schema">Schema</button>
     <button class="nav-btn" data-sec="examen">Examen</button>
@@ -44,6 +45,67 @@
     <div class="sec-title">Selecciona una capa</div>
     <div class="layer-grid" id="layer-grid"></div>
     <div id="ex-list"></div>
+  </div>
+
+  <!-- ── SECTION: CONSULTAR ── -->
+  <div id="sec-consultar" class="section">
+    <div id="consultar-apikey-banner" class="apikey-banner" style="display:none">
+      <span style="font-size:20px">⚠️</span>
+      <div class="apikey-text">
+        <strong>Configura tu API Key de Anthropic</strong> para usar el consultor SQL.<br>
+        Ve a la sección <strong>Config</strong> para ingresarla.
+      </div>
+      <button class="btn btn-ghost" onclick="switchSection('config')">Ir a Config →</button>
+    </div>
+
+    <div class="query-panel">
+      <div class="query-panel-title">💬 Consultor SQL — Pregunta de negocio</div>
+      <div class="query-panel-sub">Escribe una pregunta en español y obtén el query SQL exacto para WHMCS 8.2</div>
+
+      <div class="query-examples">
+        <div class="query-examples-label">Ejemplos rápidos</div>
+        <button class="query-chip">¿Cuánto MRR generamos por producto este mes?</button>
+        <button class="query-chip">Top 10 clientes por gasto acumulado anual</button>
+        <button class="query-chip">Clientes con VPS Pro que tienen tickets abiertos</button>
+        <button class="query-chip">Ingresos por tipo de producto en el último trimestre</button>
+        <button class="query-chip">Tasa de churn de hosting por plan en 2024</button>
+        <button class="query-chip">Servicios próximos a vencer en los próximos 30 días</button>
+        <button class="query-chip">Clientes con SSL activo pero sin correo empresarial</button>
+        <button class="query-chip">¿Qué gateway de pago genera más ingresos?</button>
+      </div>
+
+      <textarea
+        class="biz-input"
+        id="biz-question"
+        placeholder="Ej: ¿Cuáles son los clientes que tienen hosting Enterprise activo pero no han renovado SSL este año?"
+      ></textarea>
+
+      <div class="flex-row">
+        <button class="btn btn-primary" id="btn-ask">Generar query →</button>
+        <button class="btn btn-ghost" id="btn-ask-clear" style="display:none">✕ Limpiar</button>
+      </div>
+      <div class="gen-status" id="ask-status"></div>
+    </div>
+
+    <div id="ask-result" style="display:none">
+      <div class="ask-result-card">
+        <div class="ask-section-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Query sugerido</span>
+          <button class="ask-copy-btn" id="btn-copy-query">Copiar</button>
+        </div>
+        <pre id="ask-query-pre" class="ask-query-pre"></pre>
+        <div class="ask-section-label" style="margin-top:14px;">¿Qué hace este query?</div>
+        <div class="ask-explanation" id="ask-explanation"></div>
+        <div class="ask-insight-wrap">
+          <div class="ask-insight-icon">💡</div>
+          <div class="ask-insight" id="ask-insight"></div>
+        </div>
+        <div class="ask-tables-wrap">
+          <span class="ask-tables-label">Tablas:</span>
+          <span id="ask-tables"></span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── SECTION: GENERAR ── -->
@@ -201,7 +263,7 @@
 
 <script type="module">
 import { TrainerStore, SEED_EXERCISES } from './js/store.js';
-import { LAYERS, generateExercises, checkAnswer } from './js/generator.js';
+import { LAYERS, generateExercises, checkAnswer, askBusinessQuestion } from './js/generator.js';
 import { WHMCS_SCHEMA } from './data/schema.js';
 import {
   renderExerciseCard, showFeedback,
@@ -227,11 +289,12 @@ window.switchSection = function(name) {
   document.getElementById('sec-' + name).classList.add('active');
   document.querySelector(`.nav-btn[data-sec="${name}"]`)?.classList.add('active');
 
-  if (name === 'historial') renderHistory();
-  if (name === 'examen')    renderExamStart();
-  if (name === 'config')    renderConfig();
-  if (name === 'generar')   checkApiKeyBanner();
-  if (name === 'schema')    renderSchema();
+  if (name === 'historial')  renderHistory();
+  if (name === 'examen')     renderExamStart();
+  if (name === 'config')     renderConfig();
+  if (name === 'generar')    checkApiKeyBanner();
+  if (name === 'schema')     renderSchema();
+  if (name === 'consultar')  checkConsultarBanner();
 };
 
 // ─── Progress ───
@@ -354,6 +417,11 @@ function populateConceptSelect() {
 
 function checkApiKeyBanner() {
   const banner = document.getElementById('apikey-banner');
+  banner.style.display = store.getApiKey() ? 'none' : 'flex';
+}
+
+function checkConsultarBanner() {
+  const banner = document.getElementById('consultar-apikey-banner');
   banner.style.display = store.getApiKey() ? 'none' : 'flex';
 }
 
@@ -596,6 +664,80 @@ document.getElementById('btn-clear-gen').addEventListener('click', () => {
   renderLayerGrid();
   renderExerciseList();
   showToast('Ejercicios generados eliminados', 'info');
+});
+
+// ─── Consultar SQL ───
+document.querySelectorAll('.query-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.getElementById('biz-question').value = chip.textContent;
+    document.getElementById('biz-question').focus();
+  });
+});
+
+document.getElementById('btn-ask').addEventListener('click', async () => {
+  const apiKey = store.getApiKey();
+  if (!apiKey) {
+    showToast('Configura tu API Key en Config', 'error');
+    switchSection('config');
+    return;
+  }
+
+  const question = document.getElementById('biz-question').value.trim();
+  if (!question) {
+    showToast('Escribe una pregunta de negocio primero', 'error');
+    return;
+  }
+
+  const status  = document.getElementById('ask-status');
+  const result  = document.getElementById('ask-result');
+  const btn     = document.getElementById('btn-ask');
+
+  status.className = 'gen-status info show';
+  status.innerHTML = '<span class="spinner"></span> Analizando pregunta y generando query…';
+  btn.disabled = true;
+  result.style.display = 'none';
+
+  try {
+    const res = await askBusinessQuestion({
+      question,
+      apiKey,
+      customSchema: store.getCustomSchema()
+    });
+
+    document.getElementById('ask-query-pre').textContent  = res.query;
+    document.getElementById('ask-explanation').textContent = res.explanation;
+    document.getElementById('ask-insight').textContent     = res.insight;
+    document.getElementById('ask-tables').innerHTML = (res.tables || [])
+      .map(t => `<span class="table-badge">${t}</span>`).join('');
+
+    result.style.display = 'block';
+    status.className = 'gen-status ok show';
+    status.textContent = '✓ Query generado';
+    document.getElementById('btn-ask-clear').style.display = '';
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    status.className = 'gen-status error show';
+    status.textContent = `Error: ${err.message}`;
+    showToast('Error al generar query', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btn-ask-clear').addEventListener('click', () => {
+  document.getElementById('biz-question').value = '';
+  document.getElementById('ask-result').style.display = 'none';
+  document.getElementById('ask-status').className = 'gen-status';
+  document.getElementById('btn-ask-clear').style.display = 'none';
+});
+
+document.getElementById('btn-copy-query').addEventListener('click', () => {
+  const query = document.getElementById('ask-query-pre').textContent;
+  navigator.clipboard.writeText(query).then(() => {
+    const btn = document.getElementById('btn-copy-query');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = 'Copiar'; }, 1800);
+  });
 });
 
 // ─── Schema upload ───

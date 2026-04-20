@@ -189,6 +189,74 @@ export const WHMCS_SCHEMA = {
   ]
 };
 
+// ============================================================
+// CATÁLOGO DE PRODUCTOS — Valores reales en tblproducts
+// ============================================================
+export const PRODUCT_CATALOG = {
+  groups: [
+    {
+      name: "Hosting Web", gid: 1,
+      plans: [
+        { id: 10, name: "Hosting Starter",    price_mo: 59,   price_yr: 590,   desc: "1 sitio, 10GB SSD, 5 cuentas correo" },
+        { id: 11, name: "Hosting Business",   price_mo: 99,   price_yr: 990,   desc: "5 sitios, 50GB SSD, correos ilimitados" },
+        { id: 12, name: "Hosting Pro",        price_mo: 159,  price_yr: 1590,  desc: "Ilimitados, 100GB SSD, soporte 24/7" },
+        { id: 13, name: "Hosting Enterprise", price_mo: 299,  price_yr: 2990,  desc: "Ilimitados, 200GB SSD, IP dedicada, prioritario" },
+      ]
+    },
+    {
+      name: "Correo Empresarial", gid: 2,
+      plans: [
+        { id: 20, name: "Correo Starter",    price_mo: 29,  price_yr: 290,  desc: "5 cuentas, 5GB/cuenta" },
+        { id: 21, name: "Correo Business",   price_mo: 59,  price_yr: 590,  desc: "25 cuentas, 25GB/cuenta, antispam avanzado" },
+        { id: 22, name: "Correo Pro",        price_mo: 99,  price_yr: 990,  desc: "Ilimitadas, 50GB/cuenta, archivado" },
+        { id: 23, name: "Correo Enterprise", price_mo: 199, price_yr: 1990, desc: "Ilimitadas, 100GB/cuenta, GDPR" },
+      ]
+    },
+    {
+      name: "Certificados SSL", gid: 3,
+      plans: [
+        { id: 30, name: "SSL DV",       price_mo: null, price_yr: 199,  desc: "Validación dominio, 1 dominio, 2048-bit" },
+        { id: 31, name: "SSL OV",       price_mo: null, price_yr: 499,  desc: "Validación organización, green bar" },
+        { id: 32, name: "SSL Wildcard", price_mo: null, price_yr: 799,  desc: "Dominio + subdominios ilimitados" },
+        { id: 33, name: "SSL EV",       price_mo: null, price_yr: 1499, desc: "Validación extendida, máxima confianza" },
+      ]
+    },
+    {
+      name: "Website Builder", gid: 4,
+      plans: [
+        { id: 40, name: "Builder Básico",   price_mo: 79,  price_yr: 790,  desc: "1 sitio, 50 templates, SEO básico" },
+        { id: 41, name: "Builder Pro",      price_mo: 149, price_yr: 1490, desc: "5 sitios, e-commerce hasta 100 productos" },
+        { id: 42, name: "Builder Business", price_mo: 249, price_yr: 2490, desc: "Ilimitados, e-commerce sin límite, blog, SEO avanzado" },
+      ]
+    },
+    {
+      name: "VPS", gid: 5,
+      plans: [
+        { id: 50, name: "VPS Nano",       price_mo: 299,  price_yr: 2990,  desc: "1 vCPU · 2GB RAM · 40GB SSD NVMe" },
+        { id: 51, name: "VPS Start",      price_mo: 499,  price_yr: 4990,  desc: "2 vCPU · 4GB RAM · 80GB SSD NVMe" },
+        { id: 52, name: "VPS Pro",        price_mo: 999,  price_yr: 9990,  desc: "4 vCPU · 8GB RAM · 160GB SSD NVMe" },
+        { id: 53, name: "VPS Enterprise", price_mo: 1999, price_yr: 19990, desc: "8 vCPU · 16GB RAM · 320GB NVMe · IP dedicada" },
+      ]
+    },
+    {
+      name: "Servicios Gestionados", gid: 6,
+      plans: [
+        { id: 60, name: "n8n Starter",    price_mo: 199, price_yr: 1990, desc: "1,000 ejecuciones/mes · 5 workflows" },
+        { id: 61, name: "n8n Business",   price_mo: 399, price_yr: 3990, desc: "10,000 ejecuciones/mes · workflows ilimitados" },
+        { id: 62, name: "n8n Pro",        price_mo: 799, price_yr: 7990, desc: "Ejecuciones ilimitadas · SLA 99.9%" },
+        { id: 63, name: "Monitoring Pro", price_mo: 149, price_yr: 1490, desc: "Monitoreo 24/7 · alertas SMS/email · uptime reports" },
+      ]
+    },
+  ]
+};
+
+export const PRODUCTS_CONTEXT = PRODUCT_CATALOG.groups.map(g =>
+  `[${g.name} — gid=${g.gid}]\n` +
+  g.plans.map(p =>
+    `  id=${p.id} | "${p.name}" | MXN ${p.price_mo ? `$${p.price_mo}/mes` : '—'} / $${p.price_yr}/año | ${p.desc}`
+  ).join('\n')
+).join('\n\n');
+
 // Contexto de negocio para el sistema de prompts
 export const BUSINESS_CONTEXT = `
 Eres un generador de ejercicios SQL para un analista de Business Intelligence en Neubox,
