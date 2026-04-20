@@ -1,4 +1,4 @@
-# SQL Trainer — Neubox BI
+# SQL Trainer WHMCS
 
 Entrenador interactivo de SQL con autogeneración de ejercicios via Claude API.
 Contexto: schema WHMCS 8.x estándar (tablas `tbl*`), orientado a análisis BI.
