@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Trainer — Neubox BI</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">SQL</div>
+      <div>
+        <div class="logo-text">SQL Trainer</div>
+        <div class="logo-sub">Neubox BI · WHMCS 8.x</div>
+      </div>
+    </div>
+    <div class="hdr-progress">
+      <div class="hdr-progress-label">
+        <span id="hdr-progress-text">Cargando…</span>
+        <span id="hdr-progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="hdr-progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <button class="nav-btn active" data-sec="ejercicios">Ejercicios</button>
+    <button class="nav-btn" data-sec="generar">Generar</button>
+    <button class="nav-btn" data-sec="schema">Schema</button>
+    <button class="nav-btn" data-sec="examen">Examen</button>
+    <button class="nav-btn" data-sec="historial">Historial</button>
+    <button class="nav-btn" data-sec="config">Config</button>
+  </div>
+
+  <!-- ── SECTION: EJERCICIOS ── -->
+  <div id="sec-ejercicios" class="section active">
+    <div class="sec-title">Selecciona una capa</div>
+    <div class="layer-grid" id="layer-grid"></div>
+    <div id="ex-list"></div>
+  </div>
+
+  <!-- ── SECTION: GENERAR ── -->
+  <div id="sec-generar" class="section">
+    <div id="apikey-banner" class="apikey-banner" style="display:none">
+      <span style="font-size:20px">⚠️</span>
+      <div class="apikey-text">
+        <strong>Configura tu API Key de Anthropic</strong> para autogenerar ejercicios.<br>
+        Ve a la sección <strong>Config</strong> para ingresarla.
+      </div>
+      <button class="btn btn-ghost" onclick="switchSection('config')">Ir a Config →</button>
+    </div>
+
+    <div class="gen-panel">
+      <div class="gen-header">
+        <div>
+          <div class="gen-title">⚡ Generador de ejercicios</div>
+          <div class="gen-sub">Claude genera ejercicios únicos en contexto WHMCS</div>
+        </div>
+      </div>
+      <div class="gen-form">
+        <div class="form-group">
+          <label>CAPA</label>
+          <select id="gen-layer">
+            <option value="1">Capa 1 — Recuperar</option>
+            <option value="2">Capa 2 — Filtrar</option>
+            <option value="3">Capa 3 — Agregar</option>
+            <option value="4">Capa 4 — Relacionar</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>CONCEPTO</label>
+          <select id="gen-concept"></select>
+        </div>
+        <div class="form-group">
+          <label>CANTIDAD</label>
+          <select id="gen-count">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" id="btn-generate">Generar →</button>
+        </div>
+      </div>
+      <div class="gen-status" id="gen-status"></div>
+    </div>
+
+    <div id="gen-preview"></div>
+  </div>
+
+  <!-- ── SECTION: SCHEMA ── -->
+  <div id="sec-schema" class="section">
+    <div class="sec-title">Tablas WHMCS 8.x — Schema de referencia</div>
+    <div class="schema-grid" id="schema-grid"></div>
+  </div>
+
+  <!-- ── SECTION: EXAMEN ── -->
+  <div id="sec-examen" class="section">
+    <div id="exam-start">
+      <div class="exam-start-wrap">
+        <div class="exam-icon">⚡</div>
+        <div class="exam-title">Examen periódico</div>
+        <div class="exam-desc">
+          5 preguntas aleatorias de tu banco de ejercicios.<br>
+          Se adaptan a las capas que hayas desbloqueado.
+        </div>
+        <div class="exam-meta">
+          <div class="exam-meta-item">
+            <span class="exam-meta-val" id="exam-total-ex">—</span>ejercicios
+          </div>
+          <div class="exam-meta-item">
+            <span class="exam-meta-val" id="exam-total-done">—</span>completados
+          </div>
+          <div class="exam-meta-item">
+            <span class="exam-meta-val" id="exam-total-exams">—</span>exámenes previos
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-start-exam">Iniciar examen</button>
+      </div>
+    </div>
+    <div id="exam-questions" style="display:none"></div>
+    <div id="exam-result"    style="display:none"></div>
+  </div>
+
+  <!-- ── SECTION: HISTORIAL ── -->
+  <div id="sec-historial" class="section">
+    <div class="sec-title">Historial de sesión</div>
+    <div id="historial-list"></div>
+  </div>
+
+  <!-- ── SECTION: CONFIG ── -->
+  <div id="sec-config" class="section">
+    <div class="settings-card">
+      <div class="settings-title">🔑 API Key de Anthropic</div>
+      <div class="settings-desc">
+        Necesaria para autogenerar ejercicios. Se guarda solo en tu navegador (localStorage).<br>
+        Obtén tu key en <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>.
+        Nunca se envía a ningún servidor externo — va directo a api.anthropic.com.
+      </div>
+      <div class="flex-row">
+        <input type="password" id="cfg-apikey" placeholder="sk-ant-..." style="flex:1; max-width:420px;">
+        <button class="btn btn-primary" id="btn-save-key">Guardar</button>
+        <button class="btn btn-ghost"   id="btn-clear-key">Borrar</button>
+      </div>
+      <div id="cfg-key-status" style="margin-top:10px; font-size:12px; color:var(--muted); font-family:var(--mono);"></div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-title">🗂 Ejercicios generados</div>
+      <div class="settings-desc">
+        Gestiona el banco de ejercicios. Los ejercicios semilla (Capa 1 base) no se pueden borrar.
+      </div>
+      <div class="flex-row">
+        <div id="cfg-ex-count" style="font-family:var(--mono); font-size:13px; color:var(--muted);"></div>
+        <button class="btn btn-danger" id="btn-clear-gen">Borrar ejercicios generados</button>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-title">🔄 Reset completo</div>
+      <div class="settings-desc">
+        Borra todo el progreso, historial y ejercicios generados. Reinicia al estado inicial.
+      </div>
+      <button class="btn btn-danger" id="btn-reset-all">Reset total</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script type="module">
+import { TrainerStore, SEED_EXERCISES } from './js/store.js';
+import { LAYERS, generateExercises, checkAnswer } from './js/generator.js';
+import { WHMCS_SCHEMA } from './data/schema.js';
+import {
+  renderExerciseCard, showFeedback,
+  showSuccessFeedback, showErrorFeedback,
+  showHintFeedback, showSolutionFeedback,
+  showToast, renderSchemaTable, renderExamScore
+} from './js/ui.js';
+
+// ─── Store ───
+const store = new TrainerStore();
+let currentLayer = 1;
+let examQuestions = [];
+let examAnswers   = {};
+
+// ─── Navigation ───
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchSection(btn.dataset.sec));
+});
+
+window.switchSection = function(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelector(`.nav-btn[data-sec="${name}"]`)?.classList.add('active');
+
+  if (name === 'historial') renderHistory();
+  if (name === 'examen')    renderExamStart();
+  if (name === 'config')    renderConfig();
+  if (name === 'generar')   checkApiKeyBanner();
+  if (name === 'schema')    renderSchema();
+};
+
+// ─── Progress ───
+function updateProgress() {
+  const { total, done, pct } = store.getProgress();
+  document.getElementById('hdr-progress-text').textContent = `${done}/${total} ejercicios`;
+  document.getElementById('hdr-progress-pct').textContent  = pct + '%';
+  document.getElementById('hdr-progress-fill').style.width = pct + '%';
+}
+
+// ─── Layer grid ───
+function renderLayerGrid() {
+  const grid = document.getElementById('layer-grid');
+  grid.innerHTML = Object.entries(LAYERS).map(([num, layer]) => {
+    const { done, total } = store.getProgressByLayer(+num);
+    return `<button class="layer-btn ${+num === currentLayer ? 'sel' : ''}" data-l="${num}">
+      <div class="layer-num">CAPA 0${num}</div>
+      <div class="layer-title">${layer.name}</div>
+      <div class="layer-sub">${layer.concepts.slice(0,3).join(' · ')}</div>
+      <div class="layer-prog">${done}/${total} completados</div>
+    </button>`;
+  }).join('');
+
+  grid.querySelectorAll('.layer-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentLayer = +btn.dataset.l;
+      grid.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      renderExerciseList();
+    });
+  });
+}
+
+// ─── Exercise list ───
+function renderExerciseList() {
+  const list = document.getElementById('ex-list');
+  const exs  = store.getByLayer(currentLayer);
+  list.innerHTML = '';
+
+  if (exs.length === 0) {
+    list.innerHTML = `<div class="empty-state">No hay ejercicios para esta capa aún. Ve a <strong>Generar</strong> para crear algunos con Claude.</div>`;
+    return;
+  }
+
+  exs.forEach(ex => {
+    const card = renderExerciseCard(ex, store, {
+      onSubmit: handleSubmit,
+      onHint:   handleHint,
+      onSolution: handleSolution,
+    });
+    if (store.isCompleted(ex.id)) card.classList.add('is-done');
+    list.appendChild(card);
+  });
+}
+
+// ─── Submit / Hint / Solution ───
+function handleSubmit(ex, prefix = '') {
+  const input = document.getElementById(`inp_${prefix}${ex.id}`);
+  const fb    = document.getElementById(`fb_${prefix}${ex.id}`);
+  const query = input?.value || '';
+
+  if (!query.trim()) {
+    showFeedback(fb, 'hint', '⚠ Query vacío', 'Escribe algo antes de ejecutar.');
+    return;
+  }
+
+  store.logAttempt(ex.id, query, false); // pre-log as false
+
+  const result = checkAnswer(ex, query);
+
+  if (result.ok) {
+    store.markCompleted(ex.id);
+    store.logAttempt(ex.id, query, true);
+    showSuccessFeedback(fb, ex);
+    updateProgress();
+    renderLayerGrid();
+    // Mark card
+    const card = document.getElementById(`card_${prefix}${ex.id}`);
+    card?.classList.add('is-done');
+    const hdr = card?.querySelector('.ex-header');
+    if (hdr && !hdr.querySelector('.done-badge')) {
+      const b = document.createElement('span');
+      b.className = 'done-badge';
+      b.textContent = '✓';
+      hdr.appendChild(b);
+    }
+    if (prefix === 'exam_') examAnswers[ex.id] = true;
+  } else {
+    showErrorFeedback(fb, result.message);
+    if (prefix === 'exam_') examAnswers[ex.id] = false;
+  }
+
+  if (prefix === 'exam_') updateExamCounter();
+}
+
+function handleHint(ex, prefix = '') {
+  const fb = document.getElementById(`fb_${prefix}${ex.id}`);
+  showHintFeedback(fb, ex);
+}
+
+function handleSolution(ex) {
+  const fb = document.getElementById(`fb_${ex.id}`);
+  showSolutionFeedback(fb, ex);
+}
+
+// ─── Schema ───
+function renderSchema() {
+  const grid = document.getElementById('schema-grid');
+  if (grid.children.length > 0) return; // already rendered
+  grid.innerHTML = WHMCS_SCHEMA.tables.map(t => renderSchemaTable(t)).join('');
+}
+
+// ─── Generator ───
+function populateConceptSelect() {
+  const layerNum = +document.getElementById('gen-layer').value;
+  const concepts = LAYERS[layerNum]?.concepts || [];
+  const sel = document.getElementById('gen-concept');
+  sel.innerHTML = concepts.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function checkApiKeyBanner() {
+  const banner = document.getElementById('apikey-banner');
+  banner.style.display = store.getApiKey() ? 'none' : 'flex';
+}
+
+document.getElementById('gen-layer').addEventListener('change', populateConceptSelect);
+populateConceptSelect();
+
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  const apiKey = store.getApiKey();
+  if (!apiKey) {
+    showToast('Configura tu API Key en la sección Config', 'error');
+    switchSection('config');
+    return;
+  }
+
+  const layer   = +document.getElementById('gen-layer').value;
+  const concept = document.getElementById('gen-concept').value;
+  const count   = +document.getElementById('gen-count').value;
+  const existingIds = store.getExistingIdsByLayer(layer);
+
+  const status  = document.getElementById('gen-status');
+  const preview = document.getElementById('gen-preview');
+  const btn     = document.getElementById('btn-generate');
+
+  status.className = 'gen-status info show';
+  status.innerHTML = `<span class="spinner"></span> Generando ${count} ejercicio${count > 1 ? 's' : ''} sobre "${concept}"…`;
+  btn.disabled = true;
+  preview.innerHTML = '';
+
+  try {
+    const exercises = await generateExercises({ layer, concept, count, existingIds, apiKey });
+
+    const added = store.addExercises(exercises);
+    status.className = 'gen-status ok show';
+    status.textContent = `✓ ${added} ejercicio${added !== 1 ? 's' : ''} añadido${added !== 1 ? 's' : ''} al banco.`;
+
+    // Preview
+    preview.innerHTML = '<div class="sec-title mt-20">Vista previa — ejercicios generados</div>';
+    exercises.forEach(ex => {
+      const card = renderExerciseCard(ex, store, {
+        onSubmit: handleSubmit,
+        onHint:   handleHint,
+        onSolution: handleSolution,
+      });
+      preview.appendChild(card);
+    });
+
+    renderLayerGrid();
+    updateProgress();
+    showToast(`${added} ejercicio${added > 1 ? 's' : ''} generado${added > 1 ? 's' : ''}`, 'success');
+  } catch (err) {
+    status.className = 'gen-status error show';
+    status.textContent = `Error: ${err.message}`;
+    showToast('Error al generar ejercicios', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ─── Exam ───
+function renderExamStart() {
+  const exs  = store.getAll();
+  const done = store.getProgress().done;
+  document.getElementById('exam-total-ex').textContent    = exs.length;
+  document.getElementById('exam-total-done').textContent  = done;
+  document.getElementById('exam-total-exams').textContent = store.examHistory.length;
+  document.getElementById('exam-start').style.display     = 'block';
+  document.getElementById('exam-questions').style.display = 'none';
+  document.getElementById('exam-result').style.display    = 'none';
+}
+
+document.getElementById('btn-start-exam').addEventListener('click', startExam);
+
+function startExam() {
+  const all = store.getAll();
+  if (all.length < 3) {
+    showToast('Necesitas al menos 3 ejercicios para el examen', 'error');
+    return;
+  }
+
+  examAnswers   = {};
+  examQuestions = [...all].sort(() => Math.random() - 0.5).slice(0, Math.min(5, all.length));
+
+  const container = document.getElementById('exam-questions');
+  container.innerHTML = `
+    <div class="flex-row" style="margin-bottom:20px; justify-content:space-between;">
+      <div style="font-size:15px; font-weight:800;">Examen — ${examQuestions.length} preguntas</div>
+      <div class="exam-counter" id="exam-counter">0/${examQuestions.length} respondidas</div>
+    </div>`;
+
+  examQuestions.forEach(ex => {
+    const card = renderExerciseCard(ex, store, {
+      examMode: true,
+      onSubmit: handleSubmit,
+      onHint:   handleHint,
+    });
+    container.appendChild(card);
+  });
+
+  const finBtn = document.createElement('button');
+  finBtn.className = 'btn btn-primary mt-20';
+  finBtn.style.cssText = 'width:100%; padding:12px;';
+  finBtn.textContent = 'Finalizar examen →';
+  finBtn.addEventListener('click', finishExam);
+  container.appendChild(finBtn);
+
+  document.getElementById('exam-start').style.display     = 'none';
+  container.style.display = 'block';
+}
+
+function updateExamCounter() {
+  const answered = Object.keys(examAnswers).length;
+  const el = document.getElementById('exam-counter');
+  if (el) el.textContent = `${answered}/${examQuestions.length} respondidas`;
+}
+
+function finishExam() {
+  const correct = examQuestions.filter(ex => examAnswers[ex.id] === true).length;
+  const total   = examQuestions.length;
+  const pct     = Math.round((correct / total) * 100);
+  const wrongExercises = examQuestions.filter(ex => examAnswers[ex.id] !== true);
+
+  store.saveExam({ correct, total, pct });
+
+  const resultEl = document.getElementById('exam-result');
+  resultEl.innerHTML = `
+    ${renderExamScore({ correct, total, pct, wrongExercises })}
+    <div class="flex-row" style="justify-content:center; margin-top:20px; gap:10px;">
+      <button class="btn btn-primary" id="btn-retry-exam">Nuevo examen</button>
+      <button class="btn btn-ghost"   onclick="switchSection('ejercicios')">Ir a practicar</button>
+    </div>`;
+
+  document.getElementById('exam-questions').style.display = 'none';
+  resultEl.style.display = 'block';
+  resultEl.querySelector('#btn-retry-exam').addEventListener('click', () => {
+    resultEl.style.display = 'none';
+    startExam();
+  });
+
+  updateProgress();
+}
+
+// ─── History ───
+function renderHistory() {
+  const list = document.getElementById('historial-list');
+  const all  = [];
+
+  // Gather all attempts
+  store.getAll().forEach(ex => {
+    const attempts = store.getAttempts(ex.id);
+    attempts.forEach(a => all.push({ type: 'exercise', ex, ...a }));
+  });
+  store.examHistory.forEach(e => all.push({ type: 'exam', ...e }));
+
+  all.sort((a, b) => b.ts - a.ts);
+
+  if (all.length === 0) {
+    list.innerHTML = '<div class="empty-state">No hay actividad registrada aún.</div>';
+    return;
+  }
+
+  list.innerHTML = all.slice(0, 50).map(item => {
+    if (item.type === 'exam') {
+      const color = item.pct >= 80 ? 'var(--green)' : item.pct >= 60 ? 'var(--yellow)' : 'var(--red)';
+      return `<div class="history-item">
+        <span class="history-icon">⚡</span>
+        <div class="history-info">
+          <div class="history-title">Examen — ${item.correct}/${item.total} correctas</div>
+          <div class="history-meta">${new Date(item.ts).toLocaleString('es-MX')}</div>
+        </div>
+        <div class="history-score" style="color:${color}">${item.pct}%</div>
+      </div>`;
+    }
+    return `<div class="history-item">
+      <span class="history-icon" style="color:${item.ok ? 'var(--green)' : 'var(--red)'}">${item.ok ? '✓' : '✗'}</span>
+      <div class="history-info">
+        <div class="history-title">${item.ex.title}</div>
+        <div class="history-meta">${item.ex.id} · ${new Date(item.ts).toLocaleString('es-MX')}</div>
+        <div class="history-query">${item.query || ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Config ───
+function renderConfig() {
+  const keyInput = document.getElementById('cfg-apikey');
+  const keyStatus = document.getElementById('cfg-key-status');
+  const key = store.getApiKey();
+
+  if (key) {
+    keyInput.value = key;
+    keyStatus.textContent = '✓ API Key guardada — ' + key.substring(0,12) + '…';
+    keyStatus.style.color = 'var(--green)';
+  } else {
+    keyStatus.textContent = 'Sin API Key configurada.';
+    keyStatus.style.color = 'var(--muted)';
+  }
+
+  const total = store.getAll().length;
+  const seed  = SEED_EXERCISES.length;
+  document.getElementById('cfg-ex-count').textContent = `${total} ejercicios totales (${seed} semilla, ${total - seed} generados)`;
+}
+
+document.getElementById('btn-save-key').addEventListener('click', () => {
+  const val = document.getElementById('cfg-apikey').value.trim();
+  if (!val || !val.startsWith('sk-ant-')) {
+    showToast('La API Key debe empezar con sk-ant-', 'error');
+    return;
+  }
+  store.setApiKey(val);
+  renderConfig();
+  showToast('API Key guardada', 'success');
+});
+
+document.getElementById('btn-clear-key').addEventListener('click', () => {
+  store.setApiKey('');
+  document.getElementById('cfg-apikey').value = '';
+  renderConfig();
+  showToast('API Key borrada', 'info');
+});
+
+document.getElementById('btn-clear-gen').addEventListener('click', () => {
+  if (!confirm('¿Borrar todos los ejercicios generados? Los ejercicios semilla se conservan.')) return;
+  store.clearGeneratedExercises();
+  renderConfig();
+  renderLayerGrid();
+  renderExerciseList();
+  showToast('Ejercicios generados eliminados', 'info');
+});
+
+document.getElementById('btn-reset-all').addEventListener('click', () => {
+  if (!confirm('¿Reset total? Se borrará TODO el progreso, historial y ejercicios generados. Esta acción no se puede deshacer.')) return;
+  localStorage.clear();
+  window.location.reload();
+});
+
+// ─── Init ───
+renderLayerGrid();
+renderExerciseList();
+updateProgress();
+</script>
+</body>
+</html>
