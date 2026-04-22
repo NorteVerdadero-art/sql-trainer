@@ -32,6 +32,7 @@
   <!-- NAV -->
   <div class="nav">
     <button class="nav-btn active" data-sec="ejercicios">Ejercicios</button>
+    <button class="nav-btn" data-sec="temario">Temario</button>
     <button class="nav-btn" data-sec="consultar">Consultar</button>
     <button class="nav-btn" data-sec="generar">Generar</button>
     <button class="nav-btn" data-sec="schema">Schema</button>
@@ -45,6 +46,12 @@
     <div class="sec-title">Selecciona una capa</div>
     <div class="layer-grid" id="layer-grid"></div>
     <div id="ex-list"></div>
+  </div>
+
+  <!-- ── SECTION: TEMARIO ── -->
+  <div id="sec-temario" class="section">
+    <div class="sec-title">Curriculum completo — ruta de aprendizaje SQL</div>
+    <div class="temario-grid" id="temario-grid"></div>
   </div>
 
   <!-- ── SECTION: CONSULTAR ── -->
@@ -173,8 +180,8 @@
         <div class="exam-icon">⚡</div>
         <div class="exam-title">Examen periódico</div>
         <div class="exam-desc">
-          5 preguntas aleatorias de tu banco de ejercicios.<br>
-          Se adaptan a las capas que hayas desbloqueado.
+          Preguntas aleatorias del banco de ejercicios.<br>
+          Filtra por capa para practicar secciones específicas.
         </div>
         <div class="exam-meta">
           <div class="exam-meta-item">
@@ -187,6 +194,13 @@
             <span class="exam-meta-val" id="exam-total-exams">—</span>exámenes previos
           </div>
         </div>
+
+        <div class="exam-filter-section">
+          <div class="exam-filter-label">Incluir capas</div>
+          <div class="exam-filter-grid" id="exam-filter-btns"></div>
+        </div>
+        <div style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:16px;" id="exam-filter-count"></div>
+
         <button class="btn btn-primary" id="btn-start-exam">Iniciar examen</button>
       </div>
     </div>
@@ -296,6 +310,7 @@ window.switchSection = function(name) {
   if (name === 'generar')    checkApiKeyBanner();
   if (name === 'schema')     renderSchema();
   if (name === 'consultar')  checkConsultarBanner();
+  if (name === 'temario')    renderTemario();
 };
 
 // ─── Progress ───
@@ -403,6 +418,50 @@ function handleSolution(ex) {
   showSolutionFeedback(fb, ex);
 }
 
+// ─── Temario ───
+function renderTemario() {
+  const grid = document.getElementById('temario-grid');
+  grid.innerHTML = Object.entries(LAYERS).map(([num, layer]) => {
+    const exercises = store.getByLayer(+num);
+    const done  = exercises.filter(e => store.isCompleted(e.id)).length;
+    const total = exercises.length;
+    const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const conceptChips = layer.concepts.map(concept => {
+      const exs      = exercises.filter(e => e.concept === concept);
+      const doneCnt  = exs.filter(e => store.isCompleted(e.id)).length;
+      let cls = 'temario-concept';
+      if (exs.length > 0 && doneCnt === exs.length) cls += ' temario-concept-done';
+      else if (doneCnt > 0)                          cls += ' temario-concept-partial';
+
+      const badge = exs.length === 0
+        ? `<span class="temario-concept-empty-badge">sin ejercicios</span>`
+        : `<span class="temario-concept-count">${doneCnt}/${exs.length}</span>`;
+
+      return `<div class="${cls}"><span class="temario-concept-name">${concept}</span>${badge}</div>`;
+    }).join('');
+
+    return `
+      <div class="temario-card" style="border-left-color:${layer.color}">
+        <div class="temario-header">
+          <div>
+            <div class="temario-layer-num">CAPA 0${num}</div>
+            <div class="temario-layer-name" style="color:${layer.color}">${layer.name}</div>
+            <div class="temario-layer-diff">${layer.difficulty}</div>
+          </div>
+          <div class="temario-prog-wrap">
+            <div class="temario-prog-nums" style="color:${layer.color}">${done}<span style="font-size:13px;color:var(--muted)">/${total}</span></div>
+            <div class="temario-prog-label">ejercicios</div>
+          </div>
+        </div>
+        <div class="temario-bar-track">
+          <div class="temario-bar-fill" style="width:${pct}%; background:${layer.color}"></div>
+        </div>
+        <div class="temario-concepts">${conceptChips}</div>
+      </div>`;
+  }).join('');
+}
+
 // ─── Schema ───
 function renderSchema() {
   const grid = document.getElementById('schema-grid');
@@ -484,6 +543,19 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 });
 
 // ─── Exam ───
+function getSelectedLayers() {
+  return new Set(
+    [...document.querySelectorAll('.exam-filter-btn.active')].map(b => +b.dataset.layer)
+  );
+}
+
+function updateExamFilterCount() {
+  const layers  = getSelectedLayers();
+  const count   = store.getAll().filter(e => layers.has(e.layer)).length;
+  const countEl = document.getElementById('exam-filter-count');
+  if (countEl) countEl.textContent = `${count} ejercicio${count !== 1 ? 's' : ''} disponible${count !== 1 ? 's' : ''} con la selección actual`;
+}
+
 function renderExamStart() {
   const exs  = store.getAll();
   const done = store.getProgress().done;
@@ -493,14 +565,39 @@ function renderExamStart() {
   document.getElementById('exam-start').style.display     = 'block';
   document.getElementById('exam-questions').style.display = 'none';
   document.getElementById('exam-result').style.display    = 'none';
+
+  // Render layer filter buttons
+  const filterGrid = document.getElementById('exam-filter-btns');
+  if (filterGrid && filterGrid.children.length === 0) {
+    filterGrid.innerHTML = Object.entries(LAYERS).map(([num, layer]) => {
+      const cnt = store.getByLayer(+num).length;
+      return `<button class="exam-filter-btn active" data-layer="${num}"
+        style="--layer-color:${layer.color}; border-color:${layer.color}40; color:${layer.color}">
+        Capa ${num} · ${cnt}
+      </button>`;
+    }).join('');
+
+    filterGrid.querySelectorAll('.exam-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        updateExamFilterCount();
+      });
+    });
+  }
+  updateExamFilterCount();
 }
 
 document.getElementById('btn-start-exam').addEventListener('click', startExam);
 
 function startExam() {
-  const all = store.getAll();
+  const selectedLayers = getSelectedLayers();
+  if (selectedLayers.size === 0) {
+    showToast('Selecciona al menos una capa', 'error');
+    return;
+  }
+  const all = store.getAll().filter(e => selectedLayers.has(e.layer));
   if (all.length < 3) {
-    showToast('Necesitas al menos 3 ejercicios para el examen', 'error');
+    showToast('Necesitas al menos 3 ejercicios en las capas seleccionadas', 'error');
     return;
   }
 

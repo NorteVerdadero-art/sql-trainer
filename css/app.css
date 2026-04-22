@@ -664,6 +664,109 @@ option { background: var(--surface); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
 
+/* ─── Temario / Curriculum ─── */
+.temario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 14px;
+}
+@media (max-width: 600px) { .temario-grid { grid-template-columns: 1fr; } }
+
+.temario-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.temario-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px 10px;
+  gap: 12px;
+}
+.temario-layer-num  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+.temario-layer-name { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
+.temario-layer-diff { font-size: 11px; color: var(--muted); }
+
+.temario-prog-wrap  { text-align: right; flex-shrink: 0; }
+.temario-prog-nums  { font-family: var(--mono); font-size: 18px; font-weight: 800; }
+.temario-prog-label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; }
+
+.temario-bar-track {
+  height: 3px;
+  background: var(--border);
+  margin: 0 18px 14px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.temario-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
+
+.temario-concepts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px 16px; }
+
+.temario-concept {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  background: var(--surface2);
+}
+.temario-concept-done {
+  background: rgba(26,158,106,.08);
+  border-color: rgba(26,158,106,.3);
+}
+.temario-concept-partial {
+  background: rgba(59,111,212,.07);
+  border-color: rgba(59,111,212,.25);
+}
+.temario-concept-name  { color: var(--text); font-weight: 500; }
+.temario-concept-count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.temario-concept-done  .temario-concept-name  { color: var(--green); }
+.temario-concept-done  .temario-concept-count { color: var(--green); }
+.temario-concept-partial .temario-concept-name { color: var(--accent); }
+.temario-concept-empty-badge { font-family: var(--mono); font-size: 9px; color: var(--dim); }
+
+/* ─── Exam filters ─── */
+.exam-filter-section { margin-bottom: 20px; }
+.exam-filter-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.exam-filter-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.exam-filter-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  opacity: .55;
+}
+.exam-filter-btn.active {
+  opacity: 1;
+  color: var(--text);
+  border-color: var(--border2);
+}
+.exam-filter-btn:hover { opacity: 1; }
+
 /* ─── Tabla simulada MySQL ─── */
 .sim-table-wrap {
   margin-top: 14px;
